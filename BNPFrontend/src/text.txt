@@ -1,0 +1,856 @@
+import React, { useEffect, useState } from 'react'
+import Navbar from './component/Navbar'
+
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend
+} from 'recharts'
+
+import {
+  ArrowUpRight,
+  ArrowDownRight,
+  CreditCard,
+  Wallet,
+  Activity,
+  AlertTriangle,
+  TrendingUp,
+  ArrowRight,
+  ShieldCheck
+} from 'lucide-react'
+
+function App() {
+
+  const [dashboard, setDashboard] = useState(null)
+  const [statusData, setStatusData] = useState([])
+  const [transactions, setTransactions] = useState([])
+
+  const [selectedStatus, setSelectedStatus] = useState('ALL')
+  const [selectedType, setSelectedType] = useState('ALL')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedTransaction, setSelectedTransaction] = useState(null)
+  const [highValueTransactions, setHighValueTransactions] = useState([])
+  const [showHighValueOnly, setShowHighValueOnly] = useState(false)
+
+  useEffect(() => {
+
+    // Dashboard data
+    fetch('http://localhost:8080/api/transactions/dashboard')
+      .then(response => response.json())
+      .then(data => setDashboard(data))
+      .catch(error => console.error('Dashboard Error:', error))
+
+
+    // Transaction data
+    fetch('http://localhost:8080/api/transactions')
+      .then(response => response.json())
+      .then(data => setTransactions(data))
+      .catch(error => console.error('Transaction Error:', error))
+
+    // High-value transactions
+    fetch('http://localhost:8080/api/transactions/high-value?amount=20000')
+      .then(response => response.json())
+      .then(data => setHighValueTransactions(data))
+      .catch(error => console.error('High Value Error:', error))
+
+    // Transaction status
+    Promise.all([
+      fetch('http://localhost:8080/api/transactions/status/COMPLETED')
+        .then(response => response.json()),
+
+      fetch('http://localhost:8080/api/transactions/status/FAILED')
+        .then(response => response.json()),
+
+      fetch('http://localhost:8080/api/transactions/status/PENDING')
+        .then(response => response.json())
+    ])
+      .then(([completed, failed, pending]) => {
+
+        setStatusData([
+          {
+            name: 'Completed',
+            value: completed.length
+          },
+          {
+            name: 'Failed',
+            value: failed.length
+          },
+          {
+            name: 'Pending',
+            value: pending.length
+          }
+        ])
+
+      })
+      .catch(error => console.error('Status Error:', error))
+
+  }, [])
+
+const filteredTransactions = (showHighValueOnly ? highValueTransactions : transactions).filter((transaction) =>  {
+
+  const statusMatch =
+    selectedStatus === 'ALL' ||
+    transaction.status === selectedStatus
+
+  const typeMatch =
+    selectedType === 'ALL' ||
+    transaction.transactionType === selectedType
+
+const searchMatch =
+  (transaction.transactionReference || '')
+    .toLowerCase()
+    .includes(searchTerm.toLowerCase())
+
+  return statusMatch && typeMatch && searchMatch
+})
+
+
+  const statusColors = [
+    '#16a34a',
+    '#dc2626',
+    '#f59e0b'
+  ]
+
+
+  return (
+    <div className="min-h-screen bg-[#f5f8fc]">
+
+      <Navbar />
+
+
+      {/* HERO SECTION */}
+
+      <section className="relative overflow-hidden bg-[#071d3a]">
+
+        <div className="absolute -right-20 -top-32 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl"></div>
+
+        <div className="absolute -bottom-40 left-20 h-80 w-80 rounded-full bg-cyan-400/10 blur-3xl"></div>
+
+
+        <div className="relative mx-auto max-w-7xl px-6 py-12 lg:px-8">
+
+          <div className="flex flex-col justify-between gap-8 md:flex-row md:items-center">
+
+            <div>
+
+              <div className="mb-4 flex items-center gap-2 text-sm text-blue-200">
+
+                <ShieldCheck size={17} />
+
+                <span>
+                  Secure Transaction Monitoring
+                </span>
+
+              </div>
+
+
+              <h1 className="max-w-2xl text-4xl font-bold tracking-tight text-white md:text-5xl">
+
+                Banking transaction
+                <span className="block text-blue-300">
+                  intelligence at a glance.
+                </span>
+
+              </h1>
+
+
+              <p className="mt-4 max-w-xl text-base leading-7 text-slate-300">
+
+                Monitor transaction activity, identify failed payments,
+                and understand your financial operations in real time.
+
+              </p>
+
+            </div>
+
+
+            <div className="hidden md:block">
+
+              <div className="rounded-2xl border border-white/10 bg-white/10 p-6 backdrop-blur-md">
+
+                <Activity
+                  size={30}
+                  className="mb-3 text-blue-300"
+                />
+
+                <p className="text-sm text-slate-300">
+                  System Status
+                </p>
+
+                <div className="mt-2 flex items-center gap-2">
+
+                  <span className="h-2.5 w-2.5 rounded-full bg-green-400"></span>
+
+                  <span className="font-semibold text-white">
+                    All systems operational
+                  </span>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+
+      {/* MAIN DASHBOARD */}
+
+      <main className="mx-auto max-w-7xl px-6 py-10 lg:px-8">
+
+
+        {/* SECTION TITLE */}
+
+        <div className="mb-7">
+
+          <p className="text-sm font-semibold uppercase tracking-wider text-blue-700">
+            Overview
+          </p>
+
+          <h2 className="mt-1 text-2xl font-bold text-[#071d3a]">
+            Transaction Dashboard
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Real-time overview of your banking transaction activity.
+          </p>
+
+        </div>
+
+
+
+        {/* STAT CARDS */}
+
+        {dashboard && (
+
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+
+
+            {/* TOTAL */}
+
+            <div className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+
+              <div className="flex items-start justify-between">
+
+                <div>
+
+                  <p className="text-sm font-medium text-slate-500">
+                    Total Amount
+                  </p>
+
+                  <h3 className="mt-3 text-3xl font-bold text-[#071d3a]">
+                    ₹{dashboard.totalAmount.toLocaleString('en-IN')}
+                  </h3>
+
+                </div>
+
+
+                <div className="rounded-xl bg-blue-50 p-3 text-blue-700">
+
+                  <Wallet size={22} />
+
+                </div>
+
+              </div>
+
+
+              <div className="mt-5 flex items-center gap-1 text-xs font-medium text-green-600">
+
+                <ArrowUpRight size={14} />
+
+                Total processed value
+
+              </div>
+
+            </div>
+
+
+
+            {/* TRANSACTIONS */}
+
+            <div className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+
+              <div className="flex items-start justify-between">
+
+                <div>
+
+                  <p className="text-sm font-medium text-slate-500">
+                    Transactions
+                  </p>
+
+                  <h3 className="mt-3 text-3xl font-bold text-[#071d3a]">
+                    {dashboard.transactionCount}
+                  </h3>
+
+                </div>
+
+
+                <div className="rounded-xl bg-indigo-50 p-3 text-indigo-700">
+
+                  <CreditCard size={22} />
+
+                </div>
+
+              </div>
+
+
+              <div className="mt-5 flex items-center gap-1 text-xs font-medium text-slate-500">
+
+                <Activity size={14} />
+
+                Total recorded transactions
+
+              </div>
+
+            </div>
+
+
+
+            {/* AVERAGE */}
+
+            <div className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+
+              <div className="flex items-start justify-between">
+
+                <div>
+
+                  <p className="text-sm font-medium text-slate-500">
+                    Average Amount
+                  </p>
+
+                  <h3 className="mt-3 text-3xl font-bold text-[#071d3a]">
+                    ₹{dashboard.averageAmount.toLocaleString('en-IN')}
+                  </h3>
+
+                </div>
+
+
+                <div className="rounded-xl bg-cyan-50 p-3 text-cyan-700">
+
+                  <TrendingUp size={22} />
+
+                </div>
+
+              </div>
+
+
+              <div className="mt-5 flex items-center gap-1 text-xs font-medium text-slate-500">
+
+                Average value per transaction
+
+              </div>
+
+            </div>
+
+
+
+            {/* FAILED */}
+
+            <div className="group rounded-2xl border border-red-100 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+
+              <div className="flex items-start justify-between">
+
+                <div>
+
+                  <p className="text-sm font-medium text-slate-500">
+                    Failed Transactions
+                  </p>
+
+                  <h3 className="mt-3 text-3xl font-bold text-red-600">
+                    {dashboard.failedCount}
+                  </h3>
+
+                </div>
+
+
+                <div className="rounded-xl bg-red-50 p-3 text-red-600">
+
+                  <AlertTriangle size={22} />
+
+                </div>
+
+              </div>
+
+
+              <div className="mt-5 flex items-center gap-1 text-xs font-medium text-red-500">
+
+                <ArrowDownRight size={14} />
+
+                Requires attention
+
+              </div>
+
+            </div>
+
+          </div>
+
+        )}
+
+
+
+        {/* ANALYTICS SECTION */}
+
+        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-5">
+
+
+          {/* PIE CHART */}
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
+
+            <div className="mb-2">
+
+              <p className="text-sm font-semibold text-blue-700">
+                Analytics
+              </p>
+
+              <h2 className="text-xl font-bold text-[#071d3a]">
+                Transaction Status
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Distribution by transaction outcome.
+              </p>
+
+            </div>
+
+
+            {statusData.length > 0 && (
+
+              <div className="flex justify-center">
+
+                <PieChart width={360} height={300}>
+
+                  <Pie
+                    data={statusData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={65}
+                    outerRadius={105}
+                    paddingAngle={3}
+                    label
+                  >
+
+                    {statusData.map((entry, index) => (
+
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={statusColors[index]}
+                      />
+
+                    ))}
+
+                  </Pie>
+
+
+                  <Tooltip />
+
+                  <Legend />
+
+                </PieChart>
+
+              </div>
+
+            )}
+
+          </div>
+
+
+
+          {/* QUICK ACTIONS */}
+
+          <div className="relative z-50 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-3">
+
+            <p className="text-sm font-semibold text-blue-700">
+              Quick Access
+            </p>
+
+            <h2 className="mt-1 text-xl font-bold text-[#071d3a]">
+              Transaction Operations
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Access frequently used transaction monitoring tools.
+            </p>
+
+
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+
+              <button
+                  onClick={() => setShowHighValueOnly(false)}
+                  className="group flex items-center justify-between rounded-xl border border-slate-200 p-5 text-left transition hover:border-blue-300 hover:bg-blue-50"
+              >
+
+                <div>
+
+                  <p className="font-semibold text-[#071d3a]">
+                    View Transactions
+                  </p>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Browse all recorded transactions
+                  </p>
+
+                </div>
+
+                <ArrowRight
+                  size={20}
+                  className="text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-600"
+                />
+
+              </button>
+
+
+              <button
+                onClick={() => {
+                  setShowHighValueOnly(true)
+                  setSelectedStatus('ALL')
+                  setSelectedType('ALL')
+                  setSearchTerm('')
+                }}
+                  className="group flex items-center justify-between rounded-xl border border-slate-200 p-5 text-left transition hover:border-blue-300 hover:bg-blue-50"
+                >
+                  <div>
+                    <p className="font-semibold text-[#071d3a]">
+                      High Value Transactions
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      {highValueTransactions.length} high-value transactions detected
+                    </p>
+                  </div>
+
+                  <ArrowRight
+                    size={20}
+                    className="text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-600"
+                  />
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+
+        {/* RECENT TRANSACTIONS */}
+
+      <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+
+          {/* FILTERS */}
+
+          <div className="flex flex-col gap-4 border-b border-slate-200 p-6 sm:flex-row">
+
+          {/* Status Filter */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-600">
+              Status
+            </label>
+
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm outline-none focus:border-blue-500"
+            >
+              <option value="ALL">All Status</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="FAILED">Failed</option>
+              <option value="PENDING">Pending</option>
+            </select>
+          </div>
+
+
+          {/* Type Filter */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-600">
+              Transaction Type
+            </label>
+
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm outline-none focus:border-blue-500"
+            >
+              <option value="ALL">All Types</option>
+              <option value="TRANSFER">Transfer</option>
+              <option value="PAYMENT">Payment</option>
+              <option value="WITHDRAWAL">Withdrawal</option>
+              <option value="DEPOSIT">Deposit</option>
+            </select>
+          </div>
+
+          {/* Search Filter */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-600">
+              Search Transaction
+            </label>
+
+            <input
+              type="text"
+              placeholder="Search TXN reference..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+
+</div>
+          {showHighValueOnly && (
+            <div className="mx-6 mt-4 rounded-lg bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">
+              Showing High Value Transactions above ₹20,000
+            </div>
+          )}
+
+          <div className="flex flex-col justify-between gap-3 border-b border-slate-200 p-6 sm:flex-row sm:items-center">
+
+            <div>
+
+              <p className="text-sm font-semibold text-blue-700">
+                Activity
+              </p>
+
+              <h2 className="text-xl font-bold text-[#071d3a]">
+                Recent Transactions
+              </h2>
+
+            </div>
+          
+
+
+            <button className="flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900">
+
+              View all
+
+              <ArrowRight size={16} />
+
+            </button>
+
+          </div>
+
+
+
+          <div className="overflow-x-auto">
+
+            <table className="w-full min-w-[700px]">
+
+              <thead className="bg-slate-50">
+
+                <tr>
+
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Reference
+                  </th>
+
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Type
+                  </th>
+
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Amount
+                  </th>
+
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Status
+                  </th>
+
+                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Date
+                  </th>
+
+                </tr>
+
+              </thead>
+
+
+              <tbody className="divide-y divide-slate-100">
+
+                {filteredTransactions.slice(0, 5).map((transaction) =>  (
+
+                  <tr
+                    key={transaction.id}
+                    onClick={() => setSelectedTransaction(transaction)}
+                    className="cursor-pointer transition hover:bg-blue-50"
+                  >
+
+                    <td className="px-6 py-4 font-semibold text-[#071d3a]">
+                      {transaction.transactionReference || 'N/A'}
+                    </td>
+
+
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {transaction.transactionType || 'N/A'}
+                    </td>
+
+
+                    <td className="px-6 py-4 font-semibold text-slate-800">
+                      ₹{transaction.amount
+                        ? transaction.amount.toLocaleString('en-IN')
+                        : '0'}
+                    </td>
+
+
+                    <td className="px-6 py-4">
+
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          transaction.status === 'COMPLETED'
+                            ? 'bg-green-100 text-green-700'
+                            : transaction.status === 'FAILED'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}
+                      >
+
+                        {transaction.status || 'UNKNOWN'}
+
+                      </span>
+
+                    </td>
+
+
+                    <td className="px-6 py-4 text-sm text-slate-500">
+                      {transaction.transactionDate || 'N/A'}
+                    </td>
+
+                  </tr>
+
+                ))}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+        
+        {selectedTransaction && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-6">
+            <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-blue-700">
+                    Transaction Details
+                  </p>
+
+                  <h2 className="mt-1 text-2xl font-bold text-[#071d3a]">
+                    {selectedTransaction.transactionReference || 'N/A'}
+                  </h2>
+                </div>
+
+                <button
+                  onClick={() => setSelectedTransaction(null)}
+                  className="rounded-lg px-3 py-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+
+                <div className="flex justify-between border-b pb-3">
+                  <span className="text-sm text-slate-500">Transaction ID</span>
+                  <span className="font-semibold text-slate-800">
+                    #{selectedTransaction.id}
+                  </span>
+                </div>
+
+                <div className="flex justify-between border-b pb-3">
+                  <span className="text-sm text-slate-500">Amount</span>
+                  <span className="font-semibold text-slate-800">
+                    ₹{selectedTransaction.amount
+                      ? selectedTransaction.amount.toLocaleString('en-IN')
+                      : '0'}
+                  </span>
+                </div>
+
+                <div className="flex justify-between border-b pb-3">
+                  <span className="text-sm text-slate-500">Transaction Type</span>
+                  <span className="font-semibold text-slate-800">
+                    {selectedTransaction.transactionType || 'N/A'}
+                  </span>
+                </div>
+
+                <div className="flex justify-between border-b pb-3">
+                  <span className="text-sm text-slate-500">Status</span>
+                  <span className="font-semibold text-slate-800">
+                    {selectedTransaction.status || 'UNKNOWN'}
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-500">Transaction Date</span>
+                  <span className="font-semibold text-slate-800">
+                    {selectedTransaction.transactionDate || 'N/A'}
+                  </span>
+                </div>
+
+              </div>
+
+              <button
+                onClick={() => setSelectedTransaction(null)}
+                className="mt-6 w-full rounded-xl bg-[#071d3a] px-4 py-3 font-semibold text-white transition hover:bg-blue-900"
+              >
+                Close
+              </button>
+
+            </div>
+          </div>
+        )}
+
+
+        {/* FOOTER TRUST STRIP */}
+
+        <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-2xl bg-[#071d3a] px-6 py-5 text-center sm:flex-row sm:text-left">
+
+          <div className="flex items-center gap-3">
+
+            <div className="rounded-lg bg-white/10 p-2">
+
+              <ShieldCheck
+                size={20}
+                className="text-blue-300"
+              />
+
+            </div>
+
+            <div>
+
+              <p className="font-semibold text-white">
+                Secure Banking Infrastructure
+              </p>
+
+              <p className="text-xs text-slate-400">
+                Transaction monitoring powered by BankTrust
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <p className="text-xs text-slate-400">
+            Data updated from live transaction APIs
+          </p>
+
+        </div>
+
+
+      </main>
+
+    </div>
+  )
+}
+
+export default App
